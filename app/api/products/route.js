@@ -1,22 +1,10 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { productsStore } from '@/lib/data-store'
 
 // GET all products
 export async function GET() {
     try {
-        const products = await prisma.product.findMany({
-            include: {
-                store: {
-                    select: {
-                        name: true,
-                        username: true
-                    }
-                }
-            },
-            orderBy: {
-                createdAt: 'desc'
-            }
-        })
+        const products = productsStore.getAll()
         return NextResponse.json(products, { status: 200 })
     } catch (error) {
         console.error('Error fetching products:', error)
@@ -38,25 +26,15 @@ export async function POST(request) {
             )
         }
 
-        const product = await prisma.product.create({
-            data: {
-                name,
-                description,
-                mrp: parseFloat(mrp),
-                price: parseFloat(price),
-                images: images || [],
-                category,
-                storeId,
-                inStock: inStock !== undefined ? inStock : true
-            },
-            include: {
-                store: {
-                    select: {
-                        name: true,
-                        username: true
-                    }
-                }
-            }
+        const product = productsStore.create({
+            name,
+            description,
+            mrp: parseFloat(mrp),
+            price: parseFloat(price),
+            images: images || [],
+            category,
+            storeId,
+            inStock: inStock !== undefined ? inStock : true
         })
 
         return NextResponse.json(product, { status: 201 })
@@ -68,4 +46,3 @@ export async function POST(request) {
         )
     }
 }
-
