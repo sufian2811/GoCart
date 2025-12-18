@@ -1,9 +1,10 @@
 'use client'
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
 import ProductCard from "@/components/ProductCard"
 import { MoveLeftIcon } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSelector } from "react-redux"
+import { search as trackSearch } from "@/lib/analytics"
 
  function ShopContent() {
 
@@ -13,6 +14,13 @@ import { useSelector } from "react-redux"
     const router = useRouter()
 
     const products = useSelector(state => state.product.list)
+
+    // Track search queries
+    useEffect(() => {
+        if (search) {
+            trackSearch(search);
+        }
+    }, [search]);
 
     const filteredProducts = search
         ? products.filter(product =>

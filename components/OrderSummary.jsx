@@ -1,9 +1,10 @@
 import { PlusIcon, SquarePenIcon, XIcon } from 'lucide-react';
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import AddressModal from './AddressModal';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { beginCheckout, purchase } from '@/lib/analytics';
 
 const OrderSummary = ({ totalPrice, items }) => {
 
@@ -19,6 +20,13 @@ const OrderSummary = ({ totalPrice, items }) => {
     const [couponCodeInput, setCouponCodeInput] = useState('');
     const [coupon, setCoupon] = useState('');
 
+    // Track begin checkout when component mounts (user is on cart page)
+    useEffect(() => {
+        if (items.length > 0) {
+            beginCheckout(totalPrice);
+        }
+    }, [items.length, totalPrice]);
+
     const handleCouponCode = async (event) => {
         event.preventDefault();
         
@@ -26,6 +34,21 @@ const OrderSummary = ({ totalPrice, items }) => {
 
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
+
+        // Track purchase
+        const finalPrice = coupon ? (totalPrice - (coupon.discount / 100 * totalPrice)) : totalPrice;
+        const transactionId = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        purchase(
+            transactionId,
+            finalPrice,
+            items.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+            }))
+        );
 
         router.push('/orders')
     }

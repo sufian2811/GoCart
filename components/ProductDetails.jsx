@@ -3,10 +3,11 @@
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Counter from "./Counter";
 import { useDispatch, useSelector } from "react-redux";
+import { viewProduct, addToCart as trackAddToCart } from "@/lib/analytics";
 
 const ProductDetails = ({ product }) => {
 
@@ -20,8 +21,14 @@ const ProductDetails = ({ product }) => {
 
     const [mainImage, setMainImage] = useState(product.images[0]);
 
+    // Track product view
+    useEffect(() => {
+        viewProduct(product);
+    }, [product]);
+
     const addToCartHandler = () => {
         dispatch(addToCart({ productId }))
+        trackAddToCart(product);
     }
 
     const averageRating = product.rating.reduce((acc, item) => acc + item.rating, 0) / product.rating.length;

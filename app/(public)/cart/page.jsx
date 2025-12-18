@@ -7,6 +7,7 @@ import { Trash2Icon } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { removeFromCart } from "@/lib/analytics";
 
 export default function Cart() {
 
@@ -37,6 +38,10 @@ export default function Cart() {
     }
 
     const handleDeleteItemFromCart = (productId) => {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            removeFromCart(product);
+        }
         dispatch(deleteItemFromCart({ productId }))
     }
 
