@@ -1,27 +1,26 @@
 'use client'
 
 import Script from 'next/script'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
+import { Suspense } from 'react'
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 
-export default function GoogleAnalytics() {
+function GoogleAnalyticsContent() {
     const pathname = usePathname()
-    const searchParams = useSearchParams()
 
     useEffect(() => {
         if (!GA_MEASUREMENT_ID) return
 
-        const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '')
-
-        // Track page views
+        // Track page views using pathname only (search params handled separately if needed)
         if (typeof window !== 'undefined' && window.gtag) {
+            const url = pathname + (window.location.search || '')
             window.gtag('config', GA_MEASUREMENT_ID, {
                 page_path: url,
             })
         }
-    }, [pathname, searchParams])
+    }, [pathname])
 
     if (!GA_MEASUREMENT_ID) {
         return null
@@ -48,6 +47,18 @@ export default function GoogleAnalytics() {
                 }}
             />
         </>
+    )
+}
+
+export default function GoogleAnalytics() {
+    if (!GA_MEASUREMENT_ID) {
+        return null
+    }
+
+    return (
+        <Suspense fallback={null}>
+            <GoogleAnalyticsContent />
+        </Suspense>
     )
 }
 
