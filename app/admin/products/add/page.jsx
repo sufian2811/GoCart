@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
 import { useRouter } from "next/navigation"
 import Loading from "@/components/Loading"
+import { Sparkles, Loader2 } from "lucide-react"
 
 export default function AdminAddProduct() {
 
@@ -24,6 +25,8 @@ export default function AdminAddProduct() {
     const [stores, setStores] = useState([])
     const [loading, setLoading] = useState(false)
     const [fetchingStores, setFetchingStores] = useState(true)
+    const [loadingTitle, setLoadingTitle] = useState(false)
+    const [loadingDescription, setLoadingDescription] = useState(false)
 
     useEffect(() => {
         const fetchStores = async () => {
@@ -50,6 +53,86 @@ export default function AdminAddProduct() {
 
     const onChangeHandler = (e) => {
         setProductInfo({ ...productInfo, [e.target.name]: e.target.value })
+    }
+
+    const generateText = async (field) => {
+        try {
+            const OPENROUTER_API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY
+
+            if (!OPENROUTER_API_KEY) {
+                toast.error('OpenRouter API key is not configured')
+                return
+            }
+
+            // Check if there's some text to base the generation on
+            if (field === "name" && !productInfo.name && !productInfo.category) {
+                toast.error('Please enter a product name or select a category first')
+                return
+            }
+
+            if (field === "description" && !productInfo.description && !productInfo.name) {
+                toast.error('Please enter a product name or description first')
+                return
+            }
+
+            if (field === "name") setLoadingTitle(true)
+            if (field === "description") setLoadingDescription(true)
+
+            const prompt = field === "name"
+                ? `Generate a catchy, SEO-friendly product title for a ${productInfo.category || 'product'}${productInfo.name ? ` named "${productInfo.name}"` : ''}. Make it concise, appealing, and under 60 characters.`
+                : `Generate a detailed, compelling product description for a ${productInfo.category || 'product'}${productInfo.name ? ` called "${productInfo.name}"` : ''}${productInfo.description ? ` based on: "${productInfo.description}"` : ''}. Include key features, benefits, and make it engaging for customers. Keep it between 100-200 words.`
+
+            const response = await fetch(
+                "https://openrouter.ai/api/v1/chat/completions",
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": typeof window !== 'undefined' ? window.location.origin : '',
+                        "X-Title": "GoCart Product Generator"
+                    },
+                    body: JSON.stringify({
+                        model: "openai/gpt-3.5-turbo",
+                        messages: [
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ],
+                        max_tokens: field === "name" ? 50 : 200
+                    })
+                }
+            )
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}))
+                throw new Error(errorData.error?.message || 'Failed to generate text')
+            }
+
+            const data = await response.json()
+            const generatedText = data?.choices?.[0]?.message?.content?.trim() || ""
+
+            if (!generatedText) {
+                toast.error('No text generated. Please try again.')
+                return
+            }
+
+            if (field === "name") {
+                setProductInfo(prev => ({ ...prev, name: generatedText }))
+                toast.success('Product title generated!')
+            } else {
+                setProductInfo(prev => ({ ...prev, description: generatedText }))
+                toast.success('Product description generated!')
+            }
+
+        } catch (err) {
+            console.error('Error generating text:', err)
+            toast.error(err.message || 'Failed to generate text. Please try again.')
+        } finally {
+            if (field === "name") setLoadingTitle(false)
+            if (field === "description") setLoadingDescription(false)
+        }
     }
 
     const uploadImage = async (imageFile) => {
@@ -156,25 +239,65 @@ export default function AdminAddProduct() {
             </label>
 
             <label htmlFor="" className="flex flex-col gap-2 my-6">
-                Name
+                <div className="flex items-center justify-between">
+                    <span>Name</span>
+                    <button
+                        type="button"
+                        onClick={() => generateText("name")}
+                        disabled={loadingTitle}
+                        className="flex items-center gap-2 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded hover:bg-purple-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loadingTitle ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Generating...
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles size={14} />
+                                Generate with AI
+                            </>
+                        )}
+                    </button>
+                </div>
                 <input 
                     type="text" 
                     name="name" 
                     onChange={onChangeHandler} 
                     value={productInfo.name} 
-                    placeholder="Enter product name" 
+                    placeholder="Enter product name or use AI to generate" 
                     className="w-full max-w-sm p-2 px-4 outline-none border border-slate-200 rounded" 
                     required 
                 />
             </label>
 
             <label htmlFor="" className="flex flex-col gap-2 my-6">
-                Description
+                <div className="flex items-center justify-between">
+                    <span>Description</span>
+                    <button
+                        type="button"
+                        onClick={() => generateText("description")}
+                        disabled={loadingDescription}
+                        className="flex items-center gap-2 text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded hover:bg-purple-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loadingDescription ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Generating...
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles size={14} />
+                                Generate with AI
+                            </>
+                        )}
+                    </button>
+                </div>
                 <textarea 
                     name="description" 
                     onChange={onChangeHandler} 
                     value={productInfo.description} 
-                    placeholder="Enter product description" 
+                    placeholder="Enter product description or use AI to generate" 
                     rows={5} 
                     className="w-full max-w-sm p-2 px-4 outline-none border border-slate-200 rounded resize-none" 
                     required 
